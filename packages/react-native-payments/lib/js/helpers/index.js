@@ -1,11 +1,12 @@
 import type {
   PaymentDetailsInit,
-  PaymentItem,
-  PaymentShippingOption
+    PaymentItem,
+    PaymentShippingOption
 } from '../types';
 
 import { isDecimal, isFloat, isInt, toFloat, toInt } from 'validator';
 import { DOMException, ConstructorError } from '../errors';
+import { Platform } from 'react-native';
 
 type AmountValue = string | number;
 
@@ -109,8 +110,13 @@ export function getPlatformMethodData(
   return platformMethod.data;
 }
 
-// Validators
+function validateIosHasAmount() {
+  if (Platform.OS === 'ios' && parseInt(Platform.Version, 10) < 12) {
+    throw new errorType(`Missing required member(s): amount. Only for versions of iOS later to version 12.0`);
+  }
+}
 
+// Validators
 export function validateTotal(total, errorType = Error): void {
   // Should Vailidator take an errorType to prepopulate "Failed to construct 'PaymentRequest'"
 
@@ -120,8 +126,8 @@ export function validateTotal(total, errorType = Error): void {
 
   const hasTotal = total && total.amount && total.amount.value;
   // Check that there is a total
-  if (!hasTotal) {
-    throw new errorType(`Missing required member(s): amount, label.`);
+  if (hasTotal < 0 && validateIosHasAmount()) {
+    throw new errorType(`Missing required member(s): amount.`);
   }
 
   const totalAmountValue = total.amount.value;
@@ -182,7 +188,7 @@ export function validateDisplayItems(displayItems, errorType = Error): void {
     displayItems.forEach((item: PaymentItem) => {
       const amountValue = item && item.amount && item.amount.value;
 
-      if (!amountValue) {
+      if ( amountValue < 0 && validateIosHasAmount()) {
         throw new errorType(`required member value is undefined.`);
       }
 
