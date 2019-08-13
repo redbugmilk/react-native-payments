@@ -110,24 +110,22 @@ export function getPlatformMethodData(
   return platformMethod.data;
 }
 
-function validateIosHasAmount() {
-  if (Platform.OS === 'ios' && parseInt(Platform.Version, 10) < 12) {
-    throw new errorType(`Missing required member(s): amount. Only for versions of iOS later to version 12.0`);
-  }
+//Verifies if Zero Amount is supported by the device
+function supportsZeroAmount() {
+  return Platform.OS === 'ios' && parseInt(Platform.Version) >= 12;
 }
 
 // Validators
 export function validateTotal(total, errorType = Error): void {
   // Should Vailidator take an errorType to prepopulate "Failed to construct 'PaymentRequest'"
-
   if (total === undefined) {
     throw new errorType(`required member total is undefined.`);
   }
 
   const hasTotal = total && total.amount && total.amount.value;
   // Check that there is a total
-  if (hasTotal < 0 && validateIosHasAmount()) {
-    throw new errorType(`Missing required member(s): amount.`);
+  if (!hasTotal && !supportsZeroAmount()) {
+    throw new errorType(`Amount cannot be zero or null. Only for iOS versions after 12.0`);
   }
 
   const totalAmountValue = total.amount.value;
@@ -188,8 +186,8 @@ export function validateDisplayItems(displayItems, errorType = Error): void {
     displayItems.forEach((item: PaymentItem) => {
       const amountValue = item && item.amount && item.amount.value;
 
-      if ( amountValue < 0 && validateIosHasAmount()) {
-        throw new errorType(`required member value is undefined.`);
+      if (!amountValue && !supportsZeroAmount()) {
+        throw new errorType(`Amount cannot be zero or null. Only for iOS versions after 12.0`);
       }
 
       if (!isValidDecimalMonetaryValue(amountValue)) {
